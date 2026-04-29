@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm install",
+  "installCommand": "npm install",
+  "framework": null,
+  "regions": ["iad1"],
+  "functions": {
+    "api/index.ts": {
+      "runtime": "@vercel/node@3"
+    }
+  }
+}
