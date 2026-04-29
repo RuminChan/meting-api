@@ -2,7 +2,7 @@
  * Meting Node.js 使用示例
  */
 
-import Meting from '../lib/meting.esm.js';
+import Meting from '../src/meting.js';
 
 async function main() {
   // 创建 Meting 实例
