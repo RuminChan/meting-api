@@ -1,10 +1,15 @@
 {
   "name": "meting-api",
   "version": "1.0.0",
+  "type": "module",
   "description": "Meting API wrapped for Vercel",
-  "main": "api/index.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "@meting/core": "^1.6.1"
+    "@meting/core": "^1.6.1",
+    "express": "^4.19.2"
   },
   "devDependencies": {
     "@vercel/node": "^3.0.0",

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meting API 测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            padding: 30px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        select, input, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #0066cc;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: monospace;
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: #0052a3;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            width: auto;
+            margin-right: 8px;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .result-header h2 {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .result-box {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 16px;
+            overflow: auto;
+            max-height: 500px;
+        }
+        
+        pre {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #333;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #fff5f5;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0066cc;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .player-section {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+        
+        .player-section h2 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        
+        .song-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .song-item {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 16px;
+        }
+        
+        .song-header {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .song-cover {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            background: #f5f5f5;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        
+        .song-info {
+            flex: 1;
+        }
+        
+        .song-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        
+        .song-artist {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .song-album {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        
+        .song-id {
+            font-size: 12px;
+            color: #aaa;
+            font-family: monospace;
+        }
+        
+        .song-actions {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 16px;
+        }
+        
+        .now-playing {
+            background: #f0f7ff;
+            border: 1px solid #0066cc;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .now-playing-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .now-playing-artist {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .detail-section {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .detail-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .detail-content {
+            font-size: 12px;
+            color: #666;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .detail-cover {
+            max-width: 200px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Meting API 测试</h1>
+            <p>支持网易云、QQ音乐、酷狗、百度、酷我等平台</p>
+        </div>
+        
+        <form id="apiForm">
+            <div class="row">
+                <div class="form-group">
+                    <label for="server">音乐平台</label>
+                    <select id="server">
+                        <option value="netease">网易云音乐</option>
+                        <option value="tencent" selected>QQ音乐</option>
+                        <option value="kugou">酷狗音乐</option>
+                        <option value="baidu">百度音乐</option>
+                        <option value="kuwo">酷我音乐</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="type">方法类型</label>
+                    <select id="type">
+                        <option value="search">搜索</option>
+                        <option value="song">歌曲详情</option>
+                        <option value="album">专辑</option>
+                        <option value="artist">艺术家</option>
+                        <option value="playlist" selected>歌单</option>
+                        <option value="url">播放链接</option>
+                        <option value="lyric">歌词</option>
+                        <option value="pic">封面</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="id">ID / 关键词</label>
+                <input type="text" id="id" placeholder="输入歌曲ID、歌单ID或搜索关键词" value="2633897174">
+            </div>
+            
+            <div class="form-group">
+                <label for="cookie">会员 Cookie</label>
+                <textarea id="cookie" placeholder="粘贴你的会员Cookie..."></textarea>
+            </div>
+            
+            <div class="extra-params" id="extraParams">
+                <h3 style="font-size:14px;color:#555;margin-bottom:12px;">额外参数</h3>
+                <div id="paramLimit" class="form-group">
+                    <label for="limit">数量限制</label>
+                    <input type="number" id="limit" placeholder="默认30" value="30">
+                </div>
+                <div id="paramBr" class="form-group hidden">
+                    <label for="br">比特率</label>
+                    <input type="number" id="br" placeholder="默认320" value="320">
+                </div>
+                <div id="paramSize" class="form-group hidden">
+                    <label for="size">图片大小</label>
+                    <input type="number" id="size" placeholder="默认300" value="300">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">发送请求</button>
+        </form>
+        
+        <div class="player-section hidden" id="playerSection">
+            <h2>播放器</h2>
+            <div class="now-playing hidden" id="nowPlaying">
+                <div class="now-playing-title" id="nowPlayingTitle"></div>
+                <div class="now-playing-artist" id="nowPlayingArtist"></div>
+            </div>
+            <audio id="audioPlayer" controls></audio>
+            <div class="song-list" id="songList"></div>
+        </div>
+        
+        <div class="result-section">
+            <div class="result-header">
+                <h2>响应结果</h2>
+            </div>
+            <div id="result" class="result-box">
+                <pre>点击"发送请求"按钮开始测试...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('apiForm');
+        const resultDiv = document.getElementById('result');
+        const submitBtn = document.getElementById('submitBtn');
+        const typeSelect = document.getElementById('type');
+        const paramLimit = document.getElementById('paramLimit');
+        const paramBr = document.getElementById('paramBr');
+        const paramSize = document.getElementById('paramSize');
+        const playerSection = document.getElementById('playerSection');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const songList = document.getElementById('songList');
+        const nowPlaying = document.getElementById('nowPlaying');
+        const nowPlayingTitle = document.getElementById('nowPlayingTitle');
+        const nowPlayingArtist = document.getElementById('nowPlayingArtist');
+        
+        let currentSongs = [];
+        let currentServer = 'tencent';
+        let currentCookie = '';
+        
+        function updateExtraParams() {
+            const type = typeSelect.value;
+            
+            paramLimit.classList.add('hidden');
+            paramBr.classList.add('hidden');
+            paramSize.classList.add('hidden');
+            
+            switch(type) {
+                case 'search':
+                case 'artist':
+                case 'playlist':
+                    paramLimit.classList.remove('hidden');
+                    break;
+                case 'url':
+                    paramBr.classList.remove('hidden');
+                    break;
+                case 'pic':
+                    paramSize.classList.remove('hidden');
+                    break;
+            }
+        }
+        
+        typeSelect.addEventListener('change', updateExtraParams);
+        updateExtraParams();
+        
+        async function callApi(params) {
+            try {
+                const response = await fetch('/meting/api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('API 调用失败:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function getSongUrl(song) {
+            const data = await callApi({
+                server: currentServer,
+                type: 'url',
+                id: song.url_id || song.id,
+                cookie: currentCookie,
+                br: 320
+            });
+            if (data.success && data.data) {
+                return data.data.url || (data.data[0] && data.data[0].url);
+            }
+            return null;
+        }
+        
+        async function getLyric(song, element) {
+            const data = await callApi({
+                server: currentServer,
+                type: 'lyric',
+                id: song.lyric_id || song.id,
+                cookie: currentCookie
+            });
+            
+            const detailDiv = element.querySelector('.lyric-detail');
+            if (data.success) {
+                let lyricContent = '';
+                if (typeof data.data === 'string') {
+                    lyricContent = data.data;
+                } else if (data.data.lyric) {
+                    lyricContent = data.data.lyric;
+                } else {
+                    lyricContent = JSON.stringify(data.data, null, 2);
+                }
+                detailDiv.innerHTML = `<div class="detail-title">歌词</div><div class="detail-content">${lyricContent}</div>`;
+            } else {
+                detailDiv.innerHTML = `<div class="error">获取歌词失败: ${data.error}</div>`;
+            }
+        }
+        
+        async function getCover(song, element) {
+            const data = await callApi({
+                server: currentServer,
+                type: 'pic',
+                id: song.pic_id || song.id,
+                cookie: currentCookie,
+                size: 300
+            });
+            
+            const detailDiv = element.querySelector('.cover-detail');
+            if (data.success) {
+                let coverUrl = data.data;
+                if (typeof data.data === 'object' && data.data.url) {
+                    coverUrl = data.data.url;
+                }
+                detailDiv.innerHTML = `<div class="detail-title">封面</div><img src="${coverUrl}" class="detail-cover" alt="封面">`;
+            } else {
+                detailDiv.innerHTML = `<div class="error">获取封面失败: ${data.error}</div>`;
+            }
+        }
+        
+        async function playSong(song, element) {
+            const url = await getSongUrl(song);
+            if (url) {
+                audioPlayer.src = url;
+                audioPlayer.play();
+                
+                nowPlayingTitle.textContent = song.name;
+                nowPlayingArtist.textContent = song.artist ? song.artist.join(' / ') : '';
+                nowPlaying.classList.remove('hidden');
+                
+                document.querySelectorAll('.song-item').forEach(item => item.style.borderColor = '#eee');
+                element.style.borderColor = '#0066cc';
+            } else {
+                alert('无法获取播放链接');
+            }
+        }
+        
+        async function getCoverUrl(song) {
+            if (song.pic_id) {
+                const data = await callApi({
+                    server: currentServer,
+                    type: 'pic',
+                    id: song.pic_id,
+                    cookie: currentCookie,
+                    size: 300
+                });
+                if (data.success) {
+                    if (typeof data.data === 'string') {
+                        return data.data;
+                    } else if (data.data.url) {
+                        return data.data.url;
+                    }
+                }
+            }
+            return '';
+        }
+        
+        async function renderSongList(songs) {
+            currentSongs = songs;
+            songList.innerHTML = '';
+            
+            for (let i = 0; i < songs.length; i++) {
+                const song = songs[i];
+                const div = document.createElement('div');
+                div.className = 'song-item';
+                
+                const coverUrl = await getCoverUrl(song);
+                
+                div.innerHTML = `
+                    <div class="song-header">
+                        <img class="song-cover" src="${coverUrl}" alt="封面" onerror="this.style.display='none'">
+                        <div class="song-info">
+                            <div class="song-name">${i + 1}. ${song.name || '未知歌曲'}</div>
+                            <div class="song-artist">${song.artist ? song.artist.join(' / ') : '未知艺术家'}</div>
+                            <div class="song-album">专辑: ${song.album || '未知'}</div>
+                            <div class="song-id">ID: ${song.id}</div>
+                        </div>
+                    </div>
+                    <div class="song-actions">
+                        <button class="btn btn-small play-btn">播放</button>
+                        <button class="btn btn-small lyric-btn">获取歌词</button>
+                        <button class="btn btn-small cover-btn">获取封面</button>
+                    </div>
+                    <div class="lyric-detail hidden"></div>
+                    <div class="cover-detail hidden"></div>
+                `;
+                
+                div.querySelector('.play-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    playSong(song, div);
+                });
+                
+                div.querySelector('.lyric-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const lyricDetail = div.querySelector('.lyric-detail');
+                    lyricDetail.classList.toggle('hidden');
+                    if (!lyricDetail.classList.contains('hidden') && !lyricDetail.innerHTML) {
+                        getLyric(song, div);
+                    }
+                });
+                
+                div.querySelector('.cover-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const coverDetail = div.querySelector('.cover-detail');
+                    coverDetail.classList.toggle('hidden');
+                    if (!coverDetail.classList.contains('hidden') && !coverDetail.innerHTML) {
+                        getCover(song, div);
+                    }
+                });
+                
+                songList.appendChild(div);
+            }
+            
+            playerSection.classList.remove('hidden');
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const server = document.getElementById('server').value;
+            const type = document.getElementById('type').value;
+            const id = document.getElementById('id').value;
+            const cookie = document.getElementById('cookie').value;
+            const limit = parseInt(document.getElementById('limit').value) || 30;
+            const br = parseInt(document.getElementById('br').value) || 320;
+            const size = parseInt(document.getElementById('size').value) || 300;
+            
+            currentServer = server;
+            currentCookie = cookie;
+            
+            if (!cookie) {
+                resultDiv.innerHTML = '<div class="error">请输入会员 Cookie</div>';
+                return;
+            }
+            
+            if (!id) {
+                resultDiv.innerHTML = '<div class="error">请输入 ID 或关键词</div>';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在请求中...</p></div>';
+            playerSection.classList.add('hidden');
+            
+            try {
+                const data = await callApi({
+                    server,
+                    type,
+                    id,
+                    cookie,
+                    limit,
+                    br,
+                    size
+                });
+                
+                if (data.success) {
+                    resultDiv.innerHTML = '<pre>' + JSON.stringify(data.data, null, 2) + '</pre>';
+                    
+                    if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                        const firstItem = data.data[0];
+                        if (firstItem.name && (firstItem.url_id || firstItem.id)) {
+                            renderSongList(data.data);
+                        }
+                    }
+                } else {
+                    resultDiv.innerHTML = '<div class="error">请求失败: ' + (data.error || '未知错误') + '</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">请求错误: ' + error.message + '</div>';
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

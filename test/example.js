@@ -1,76 +1,60 @@
 /**
- * Meting Node.js 使用示例
+ * Meting Node.js 测试 QQ 音乐歌单
  */
 
 import Meting from '../src/meting.js';
 
 async function main() {
-  // 创建 Meting 实例
-  const meting = new Meting('netease'); // 可选: 'netease', 'tencent', 'kugou', 'baidu', 'kuwo'
+  // 创建 Meting 实例，使用腾讯音乐平台
+  const meting = new Meting('tencent');
+  
+  // 设置会员 cookie
+  const qqCookie = 'ptcz=4f12af52a529937ea8eb5a91aefae084836069fb38dc7919f2241a046bcfc061; yyb_muid=1CC16F0F508968AC102D7A0551A76923; pgv_pvid=8083129450; eas_sid=01q7a5G7O9N4e2c589D630a1e3; RK=aXxq9tJF00; fqm_pvqid=373e3cfe-d59b-44f1-a55d-dc78900afb89; fqm_sessionid=f3a4181e-d29e-4ff4-aae3-dfdddbbc03e1; _qpsvr_localtk=0.5592945411071832; pgv_info=ssid=s7099375940; ts_uid=8443681180; login_type=1; wxrefresh_token=; psrf_qqaccess_token=B91CD6F25B3EFAFA6DF4C098DA86B1D7; tmeLoginType=2; psrf_access_token_expiresAt=1782434330; wxopenid=; psrf_qqunionid=2AB69488DDC9ED4B7C50CBA7F9EE562B; wxunionid=; qm_keyst=Q_H_L_63k3NNsY1cUgrkzi8Xj4Tjjbrvpny_HdDuOD_oPneEeHZGsPip44hkEi_CFQEtT-W_JXAknd98Spdi7U-4TE1CUkb; music_ignore_pskey=202306271436Hn@vBj; uin=527623956; qqmusic_key=Q_H_L_63k3NNsY1cUgrkzi8Xj4Tjjbrvpny_HdDuOD_oPneEeHZGsPip44hkEi_CFQEtT-W_JXAknd98Spdi7U-4TE1CUkb; psrf_qqopenid=C6E6877F367FDBD43C9995081E7A0D1B; euin=7K-l7w-iNK4s; psrf_musickey_createtime=1777250330; psrf_qqrefresh_token=DFF0AF84633851C51E7988640508CD08';
+  meting.cookie(qqCookie);
   
   // 开启数据格式化
   meting.format(true);
   
-  console.log('=== Meting Node.js 示例 ===\n');
+  console.log('=== 测试 QQ 音乐歌单 ===\n');
+  
+  const playlistId = '2633897174';
+  console.log(`歌单 ID: ${playlistId}\n`);
   
   try {
-    // 1. 搜索歌曲
-    console.log('1. 搜索歌曲：');
-    const searchResult = await meting.search('烟火里的尘埃', { limit: 3 });
-    console.log('搜索结果：');
-    console.log(JSON.stringify(JSON.parse(searchResult), null, 2));
+    // 获取歌单内容
+    console.log('1. 获取歌单内容：');
+    const playlistResult = await meting.playlist(playlistId);
+    console.log('歌单数据：');
+    console.log(JSON.stringify(JSON.parse(playlistResult), null, 2));
     console.log('\n');
     
-    // 获取第一首歌的 ID
-    const songs = JSON.parse(searchResult);
+    const songs = JSON.parse(playlistResult);
     if (songs.length > 0) {
-      const firstSong = songs[0];
-      console.log(`选择歌曲: ${firstSong.name} - ${firstSong.artist.join(', ')}\n`);
+      console.log(`✅ 成功获取歌单，共 ${songs.length} 首歌曲\n`);
       
-      // 2. 获取歌曲详情
-      console.log('2. 获取歌曲详情：');
-      const songDetail = await meting.song(firstSong.id);
-      console.log('歌曲详情：');
-      console.log(JSON.stringify(JSON.parse(songDetail), null, 2));
+      // 显示前几首歌
+      console.log('前 3 首歌曲：');
+      songs.slice(0, 3).forEach((song, index) => {
+        console.log(`${index + 1}. ${song.name} - ${song.artist.join(', ')}`);
+      });
       console.log('\n');
       
-      // 3. 获取歌曲播放链接
-      console.log('3. 获取歌曲播放链接：');
-      const url = await meting.url(firstSong.url_id, 320);
-      console.log('播放链接：');
-      console.log(JSON.stringify(JSON.parse(url), null, 2));
-      console.log('\n');
-      
-      // 4. 获取歌词
-      console.log('4. 获取歌词：');
-      const lyric = await meting.lyric(firstSong.lyric_id);
-      const lyricData = JSON.parse(lyric);
-      console.log('歌词预览（前5行）：');
-      if (lyricData.lyric) {
-        const lines = lyricData.lyric.split('\n').slice(0, 5);
-        lines.forEach(line => {
-          if (line.trim()) console.log(line);
-        });
-      } else {
-        console.log('暂无歌词');
+      // 测试获取第一首歌的播放链接
+      if (songs[0]) {
+        const firstSong = songs[0];
+        console.log(`2. 测试获取第一首歌的播放链接：`);
+        console.log(`歌曲: ${firstSong.name} - ${firstSong.artist.join(', ')}`);
+        try {
+          const url = await meting.url(firstSong.url_id, 320);
+          console.log('播放链接：');
+          console.log(JSON.stringify(JSON.parse(url), null, 2));
+        } catch (err) {
+          console.log('获取播放链接失败:', err.message);
+        }
       }
-      console.log('\n');
-      
-      // 5. 获取封面图片
-      console.log('5. 获取封面图片：');
-      const pic = await meting.pic(firstSong.pic_id, 300);
-      console.log('封面图片：');
-      console.log(JSON.stringify(JSON.parse(pic), null, 2));
-      console.log('\n');
+    } else {
+      console.log('❌ 歌单为空或获取失败');
     }
-    
-    // 6. 切换到其他平台测试
-    console.log('6. 切换到腾讯音乐平台：');
-    meting.site('tencent');
-    const tencentSearch = await meting.search('邓紫棋', { limit: 2 });
-    console.log('腾讯音乐搜索结果：');
-    console.log(JSON.stringify(JSON.parse(tencentSearch), null, 2));
-    console.log('\n');
     
   } catch (error) {
     console.error('发生错误：', error);
@@ -79,7 +63,7 @@ async function main() {
 
 // 运行示例
 main().then(() => {
-  console.log('示例运行完成！');
+  console.log('\n测试完成！');
 }).catch(error => {
-  console.error('示例运行失败：', error);
+  console.error('测试失败：', error);
 });
