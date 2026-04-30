@@ -256,21 +256,106 @@
         .now-playing {
             background: #f0f7ff;
             border: 1px solid #0066cc;
-            border-radius: 4px;
-            padding: 16px;
+            border-radius: 8px;
+            padding: 24px;
             margin-bottom: 16px;
         }
         
-        .now-playing-title {
-            font-size: 14px;
+        .now-playing-header {
+            font-size: 12px;
+            color: #0066cc;
             font-weight: 500;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .now-playing-content {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .now-playing-cover {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #e0e0e0;
+            flex-shrink: 0;
+        }
+        
+        .now-playing-info {
+            flex: 1;
+        }
+        
+        .now-playing-title {
+            font-size: 20px;
+            font-weight: 600;
             color: #333;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
         
         .now-playing-artist {
-            font-size: 12px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .now-playing-album {
+            font-size: 13px;
             color: #888;
+        }
+        
+        .playlist-section {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .playlist-header {
+            background: #f5f5f5;
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .playlist-header:hover {
+            background: #f0f0f0;
+        }
+        
+        .playlist-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .playlist-count {
+            font-size: 13px;
+            color: #888;
+        }
+        
+        .playlist-toggle {
+            font-size: 20px;
+            color: #666;
+            transition: transform 0.3s ease;
+        }
+        
+        .playlist-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .playlist-content {
+            max-height: 600px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+        
+        .playlist-content.collapsed {
+            max-height: 0;
         }
         
         .detail-section {
@@ -366,12 +451,33 @@
         
         <div class="player-section hidden" id="playerSection">
             <h2>播放器</h2>
+            
             <div class="now-playing hidden" id="nowPlaying">
-                <div class="now-playing-title" id="nowPlayingTitle"></div>
-                <div class="now-playing-artist" id="nowPlayingArtist"></div>
+                <div class="now-playing-header">当前播放</div>
+                <div class="now-playing-content">
+                    <img class="now-playing-cover" id="nowPlayingCover" src="" alt="封面">
+                    <div class="now-playing-info">
+                        <div class="now-playing-title" id="nowPlayingTitle"></div>
+                        <div class="now-playing-artist" id="nowPlayingArtist"></div>
+                        <div class="now-playing-album" id="nowPlayingAlbum"></div>
+                    </div>
+                </div>
             </div>
+            
             <audio id="audioPlayer" controls></audio>
-            <div class="song-list" id="songList"></div>
+            
+            <div class="playlist-section" id="playlistSection">
+                <div class="playlist-header" id="playlistHeader">
+                    <div>
+                        <span class="playlist-title">歌单</span>
+                        <span class="playlist-count" id="playlistCount"></span>
+                    </div>
+                    <span class="playlist-toggle" id="playlistToggle">▼</span>
+                </div>
+                <div class="playlist-content" id="playlistContent">
+                    <div class="song-list" id="songList"></div>
+                </div>
+            </div>
         </div>
         
         <div class="result-section">
@@ -396,12 +502,27 @@
         const audioPlayer = document.getElementById('audioPlayer');
         const songList = document.getElementById('songList');
         const nowPlaying = document.getElementById('nowPlaying');
+        const nowPlayingCover = document.getElementById('nowPlayingCover');
         const nowPlayingTitle = document.getElementById('nowPlayingTitle');
         const nowPlayingArtist = document.getElementById('nowPlayingArtist');
+        const nowPlayingAlbum = document.getElementById('nowPlayingAlbum');
+        const playlistSection = document.getElementById('playlistSection');
+        const playlistHeader = document.getElementById('playlistHeader');
+        const playlistContent = document.getElementById('playlistContent');
+        const playlistToggle = document.getElementById('playlistToggle');
+        const playlistCount = document.getElementById('playlistCount');
         
         let currentSongs = [];
         let currentServer = 'tencent';
         let currentCookie = '';
+        let playlistCollapsed = false;
+        
+        // 折叠/展开歌单
+        playlistHeader.addEventListener('click', () => {
+            playlistCollapsed = !playlistCollapsed;
+            playlistContent.classList.toggle('collapsed', playlistCollapsed);
+            playlistToggle.classList.toggle('collapsed', playlistCollapsed);
+        });
         
         function updateExtraParams() {
             const type = typeSelect.value;
@@ -445,6 +566,8 @@
         }
         
         async function getSongUrl(song) {
+            console.log('获取播放链接，歌曲:', song);
+            
             const data = await callApi({
                 server: currentServer,
                 type: 'url',
@@ -452,9 +575,20 @@
                 cookie: currentCookie,
                 br: 320
             });
+            
+            console.log('API响应:', data);
+            
             if (data.success && data.data) {
-                return data.data.url || (data.data[0] && data.data[0].url);
+                // 支持多种返回格式
+                if (data.data.url) {
+                    return data.data.url;
+                }
+                if (Array.isArray(data.data) && data.data[0] && data.data[0].url) {
+                    return data.data[0].url;
+                }
             }
+            
+            console.warn('获取播放链接失败，API响应:', data);
             return null;
         }
         
@@ -504,19 +638,37 @@
         }
         
         async function playSong(song, element) {
+            console.log('播放歌曲:', song);
+            
             const url = await getSongUrl(song);
             if (url) {
                 audioPlayer.src = url;
                 audioPlayer.play();
                 
+                // 更新当前播放信息
                 nowPlayingTitle.textContent = song.name;
                 nowPlayingArtist.textContent = song.artist ? song.artist.join(' / ') : '';
+                nowPlayingAlbum.textContent = song.album ? `专辑: ${song.album}` : '';
+                
+                // 获取并显示封面
+                const coverUrl = await getCoverUrl(song);
+                nowPlayingCover.src = coverUrl;
+                nowPlayingCover.onerror = () => {
+                    nowPlayingCover.style.display = 'none';
+                };
+                nowPlayingCover.style.display = coverUrl ? 'block' : 'none';
+                
                 nowPlaying.classList.remove('hidden');
                 
+                // 高亮当前播放的歌曲
                 document.querySelectorAll('.song-item').forEach(item => item.style.borderColor = '#eee');
-                element.style.borderColor = '#0066cc';
+                if (element) {
+                    element.style.borderColor = '#0066cc';
+                }
             } else {
-                alert('无法获取播放链接');
+                const errorMsg = '无法获取播放链接，请检查：1) 会员Cookie是否有效；2) 该歌曲是否需要VIP权限';
+                console.error(errorMsg);
+                alert(errorMsg);
             }
         }
         
@@ -596,7 +748,16 @@
                 songList.appendChild(div);
             }
             
+            // 更新歌单数量
+            playlistCount.textContent = `(${songs.length} 首)`;
+            
+            // 显示播放器区域
             playerSection.classList.remove('hidden');
+            
+            // 自动播放第一首歌
+            if (songs.length > 0) {
+                playSong(songs[0], null);
+            }
         }
         
         form.addEventListener('submit', async (e) => {

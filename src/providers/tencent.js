@@ -262,6 +262,41 @@ export default class TencentProvider extends BaseProvider {
     
     const response = JSON.parse(await this.meting._exec(api));
     
+    // 检测 cookie 失效特征
+    const isCookieInvalid = (() => {
+      try {
+        if (!response || !response.req_0) return false;
+        
+        // 检测常见的 cookie 失效特征
+        const code = response.req_0.code;
+        const subcode = response.req_0.subcode;
+        
+        if (code === -1000 || code === -3000 || subcode === -1000 || subcode === -3000) {
+          return true;
+        }
+        
+        // 检测 vkey 全部为空（说明cookie可能失效）
+        if (response.req_0.data && response.req_0.data.midurlinfo) {
+          const allVkeysEmpty = response.req_0.data.midurlinfo.every(item => !item || !item.vkey);
+          if (allVkeysEmpty) return true;
+        }
+        
+        return false;
+      } catch (e) {
+        return false;
+      }
+    })();
+    
+    // 如果检测到 cookie 失效，返回特定标识
+    if (isCookieInvalid) {
+      return JSON.stringify({
+        url: '',
+        size: 0,
+        br: -1,
+        error: 'cookie_invalid'
+      });
+    }
+    
     // 检查响应数据是否有效
     if (!response.req_0 || !response.req_0.data || !response.req_0.data.midurlinfo) {
       return JSON.stringify({ url: '', size: 0, br: -1 });
