@@ -196,6 +196,19 @@ export default class TencentProvider extends BaseProvider {
    */
   async urlDecode(result) {
     const data = JSON.parse(result);
+    
+    // 检查数据是否有效
+    if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
+      return JSON.stringify({ url: '', size: 0, br: -1 });
+    }
+    
+    const songData = data.data[0];
+    
+    // 检查必要的字段是否存在
+    if (!songData.mid || !songData.file || !songData.file.media_mid) {
+      return JSON.stringify({ url: '', size: 0, br: -1 });
+    }
+    
     const guid = Math.floor(Math.random() * 10000000000);
     
     const qualityMap = [
@@ -231,9 +244,9 @@ export default class TencentProvider extends BaseProvider {
     };
     
     qualityMap.forEach(([sizeKey, br, prefix, ext]) => {
-      payload.req_0.param.songmid.push(data.data[0].mid);
-      payload.req_0.param.filename.push(`${prefix}${data.data[0].file.media_mid}.${ext}`);
-      payload.req_0.param.songtype.push(data.data[0].type);
+      payload.req_0.param.songmid.push(songData.mid);
+      payload.req_0.param.filename.push(`${prefix}${songData.file.media_mid}.${ext}`);
+      payload.req_0.param.songtype.push(songData.type || 0);
     });
     
     const api = {
@@ -248,16 +261,22 @@ export default class TencentProvider extends BaseProvider {
     };
     
     const response = JSON.parse(await this.meting._exec(api));
+    
+    // 检查响应数据是否有效
+    if (!response.req_0 || !response.req_0.data || !response.req_0.data.midurlinfo) {
+      return JSON.stringify({ url: '', size: 0, br: -1 });
+    }
+    
     const vkeys = response.req_0.data.midurlinfo;
     
     let url;
     for (let i = 0; i < qualityMap.length; i++) {
       const [sizeKey, br, prefix, ext] = qualityMap[i];
-      if (data.data[0].file[sizeKey] && br <= this.meting.temp.br) {
-        if (vkeys[i].vkey) {
+      if (songData.file[sizeKey] && br <= this.meting.temp.br) {
+        if (vkeys[i] && vkeys[i].vkey) {
           url = {
             url: response.req_0.data.sip[0] + vkeys[i].purl,
-            size: data.data[0].file[sizeKey],
+            size: songData.file[sizeKey],
             br: br
           };
           break;
