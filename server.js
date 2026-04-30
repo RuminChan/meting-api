@@ -189,26 +189,85 @@ app.use((req, res, next) => {
     next();
 });
 
+// 请求验证中间件
+function validateRequest(req, res, next) {
+    if (req.path === '/meting/api' && req.method === 'POST') {
+        if (!req.body) {
+            return res.status(400).json({
+                success: false,
+                error: 'Bad Request',
+                message: '请求体不能为空'
+            });
+        }
+    }
+    next();
+}
+
+app.use(validateRequest);
+
 app.post('/meting/api', async (req, res) => {
     try {
         const { cookie, server, type, id, limit, br, size } = req.body;
 
-        if (!cookie) {
-            return res.status(400).json({ error: 'Missing required parameter: cookie' });
+        // 验证必填参数
+        const missingParams = [];
+        if (!cookie) missingParams.push('cookie');
+        if (!type) missingParams.push('type');
+        
+        if (missingParams.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Bad Request',
+                message: `缺少必填参数: ${missingParams.join(', ')}`
+            });
         }
 
-        if (!type) {
-            return res.status(400).json({ error: 'Missing required parameter: type' });
+        // 验证平台是否支持
+        const supportedServers = ['netease', 'tencent', 'kugou', 'baidu', 'kuwo'];
+        const targetServer = server || 'netease';
+        if (!supportedServers.includes(targetServer)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid Server',
+                message: `不支持的平台: ${targetServer}，支持的平台: ${supportedServers.join(', ')}`
+            });
         }
 
-        const meting = new Meting(server || 'netease');
+        // 验证类型是否支持
+        const supportedTypes = ['search', 'song', 'album', 'artist', 'playlist', 'url', 'lyric', 'pic'];
+        const targetType = type.toLowerCase();
+        if (!supportedTypes.includes(targetType)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid Type',
+                message: `不支持的操作类型: ${targetType}，支持的类型: ${supportedTypes.join(', ')}`
+            });
+        }
+
+        // 验证 id 是否存在（对于非 search 类型）
+        if (targetType !== 'search' && !id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Bad Request',
+                message: `类型 "${targetType}" 需要 id 参数`
+            });
+        }
+
+        const meting = new Meting(targetServer);
         meting.cookie(cookie);
         meting.format(true);
 
         let result;
 
-        switch (type.toLowerCase()) {
+        switch (targetType) {
             case 'search':
+                if (!id) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Bad Request',
+                        message: '搜索需要 id 参数作为关键词'
+                    });
+                }
                 result = await meting.search(id, { limit: limit || 30 });
                 break;
             case 'song':
@@ -232,19 +291,59 @@ app.post('/meting/api', async (req, res) => {
             case 'pic':
                 result = await meting.pic(id, size || 300);
                 break;
-            default:
-                return res.status(400).json({ error: `Unknown type: ${type}` });
         }
 
         try {
-            res.json({ success: true, data: JSON.parse(result) });
-        } catch {
-            res.json({ success: true, data: result });
+            // 尝试解析为 JSON
+            const parsedResult = JSON.parse(result);
+            res.json({
+                success: true,
+                data: parsedResult,
+                server: targetServer,
+                type: targetType
+            });
+        } catch (parseError) {
+            // 如果不是 JSON，直接返回原始结果
+            res.json({
+                success: true,
+                data: result,
+                server: targetServer,
+                type: targetType
+            });
         }
 
     } catch (error) {
         console.error('API Error:', error);
-        res.status(500).json({ success: false, error: error.message });
+        
+        // 根据错误类型返回不同的状态码和信息
+        let statusCode = 500;
+        let errorType = 'Internal Server Error';
+        let errorMessage = error.message || '服务器内部错误';
+        
+        // 识别常见的错误类型
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+            statusCode = 504;
+            errorType = 'Gateway Timeout';
+            errorMessage = '请求超时，请稍后重试';
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+            statusCode = 502;
+            errorType = 'Bad Gateway';
+            errorMessage = '网络请求失败';
+        } else if (error.message.includes('cookie') || error.message.includes('login')) {
+            statusCode = 401;
+            errorType = 'Unauthorized';
+            errorMessage = 'Cookie 无效或已过期';
+        }
+        
+        res.status(statusCode).json({
+            success: false,
+            error: errorType,
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? {
+                stack: error.stack,
+                name: error.name
+            } : undefined
+        });
     }
 });
 
@@ -276,6 +375,50 @@ app.delete('/meting/admin/blacklist/:ip', (req, res) => {
 
 app.get('/', (req, res) => {
     res.redirect('/meting/doc');
+});
+
+// 404 处理
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Not Found',
+        message: `请求的路径不存在: ${req.method} ${req.path}`
+    });
+});
+
+// 全局错误处理中间件
+app.use((err, req, res, next) => {
+    console.error('Global Error:', err);
+    
+    let statusCode = 500;
+    let errorType = 'Internal Server Error';
+    let errorMessage = '服务器内部错误';
+    
+    // 识别常见的错误类型
+    if (err instanceof SyntaxError && err.type === 'entity.parse.failed') {
+        statusCode = 400;
+        errorType = 'Bad Request';
+        errorMessage = 'JSON 格式错误';
+    } else if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+        statusCode = 502;
+        errorType = 'Bad Gateway';
+        errorMessage = '网络连接失败';
+    } else if (err.name === 'ValidationError') {
+        statusCode = 400;
+        errorType = 'Validation Error';
+        errorMessage = err.message;
+    }
+    
+    res.status(statusCode).json({
+        success: false,
+        error: errorType,
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? {
+            stack: err.stack,
+            name: err.name,
+            code: err.code
+        } : undefined
+    });
 });
 
 app.listen(PORT, () => {
