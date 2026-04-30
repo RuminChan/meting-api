@@ -426,7 +426,7 @@
             </div>
             
             <div class="form-group">
-                <label for="cookie">会员 Cookie</label>
+                <label for="cookie">会员 Cookie <span style="color: #999; font-weight: normal;">(可选，只有会员歌曲需要</span></label>
                 <textarea id="cookie" placeholder="粘贴你的会员Cookie..."></textarea>
             </div>
             
@@ -586,6 +586,9 @@
                 if (Array.isArray(data.data) && data.data[0] && data.data[0].url) {
                     return data.data[0].url;
                 }
+            } else if (!data.success) {
+                // 返回错误信息
+                return { error: data };
             }
             
             console.warn('获取播放链接失败，API响应:', data);
@@ -641,7 +644,8 @@
             console.log('播放歌曲:', song);
             
             const url = await getSongUrl(song);
-            if (url) {
+            
+            if (url && typeof url === 'string') {
                 audioPlayer.src = url;
                 audioPlayer.play();
                 
@@ -665,6 +669,30 @@
                 if (element) {
                     element.style.borderColor = '#0066cc';
                 }
+            } else if (url && url.error) {
+                // 显示详细的错误信息
+                const data = url.error;
+                let errorHtml = '';
+                if (data.error === 'Cookie Required') {
+                    errorHtml = `
+                        <div class="error" style="text-align:left;">
+                            <div style="font-size:16px;font-weight:600;margin-bottom:8px;">⚠️ 需要Cookie</div>
+                            <div style="margin-bottom:10px;">${data.message}</div>
+                            <div style="background:#fff3cd;padding:12px;border-radius:6px;color:#856404;font-size:13px;">${data.hint || ''}</div>
+                        </div>
+                    `;
+                } else if (data.error === 'Cookie Invalid') {
+                    errorHtml = `
+                        <div class="error" style="text-align:left;">
+                            <div style="font-size:16px;font-weight:600;margin-bottom:8px;">❌ Cookie失效</div>
+                            <div style="margin-bottom:10px;">${data.message}</div>
+                            <div style="background:#f8d7da;padding:12px;border-radius:6px;color:#721c24;font-size:13px;">${data.hint || ''}</div>
+                        </div>
+                    `;
+                } else {
+                    errorHtml = `<div class="error">无法获取播放链接: ${data.error} - ${data.message || ''}</div>`;
+                }
+                resultDiv.innerHTML = errorHtml;
             } else {
                 const errorMsg = '无法获取播放链接，请检查：1) 会员Cookie是否有效；2) 该歌曲是否需要VIP权限';
                 console.error(errorMsg);
@@ -774,11 +802,6 @@
             currentServer = server;
             currentCookie = cookie;
             
-            if (!cookie) {
-                resultDiv.innerHTML = '<div class="error">请输入会员 Cookie</div>';
-                return;
-            }
-            
             if (!id) {
                 resultDiv.innerHTML = '<div class="error">请输入 ID 或关键词</div>';
                 return;
@@ -809,7 +832,26 @@
                         }
                     }
                 } else {
-                    resultDiv.innerHTML = '<div class="error">请求失败: ' + (data.error || '未知错误') + '</div>';
+                    let errorHtml = '<div class="error">';
+                    
+                    if (data.error === 'Cookie Required') {
+                        errorHtml += `
+                            <div style="font-size:16px;font-weight:600;margin-bottom:8px;">⚠️ 需要Cookie</div>
+                            <div style="margin-bottom:10px;">${data.message}</div>
+                            <div style="background:#fff3cd;padding:12px;border-radius:6px;color:#856404;font-size:13px;">${data.hint || ''}</div>
+                        `;
+                    } else if (data.error === 'Cookie Invalid') {
+                        errorHtml += `
+                            <div style="font-size:16px;font-weight:600;margin-bottom:8px;">❌ Cookie失效</div>
+                            <div style="margin-bottom:10px;">${data.message}</div>
+                            <div style="background:#f8d7da;padding:12px;border-radius:6px;color:#721c24;font-size:13px;">${data.hint || ''}</div>
+                        `;
+                    } else {
+                        errorHtml += `请求失败: ${data.error || '未知错误'}<br><span style="color:#666;">${data.message || ''}</span>`;
+                    }
+                    
+                    errorHtml += '</div>';
+                    resultDiv.innerHTML = errorHtml;
                 }
             } catch (error) {
                 resultDiv.innerHTML = '<div class="error">请求错误: ' + error.message + '</div>';

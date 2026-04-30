@@ -211,7 +211,6 @@ app.post('/meting/api', async (req, res) => {
 
         // 验证必填参数
         const missingParams = [];
-        if (!cookie) missingParams.push('cookie');
         if (!type) missingParams.push('type');
         
         if (missingParams.length > 0) {
@@ -297,18 +296,31 @@ app.post('/meting/api', async (req, res) => {
             // 尝试解析为 JSON
             const parsedResult = JSON.parse(result);
             
-            // 检测 cookie 失效（只对QQ音乐的url请求）
+            // 检测 cookie 相关问题（只对QQ音乐的url请求）
             if (targetType === 'url' && targetServer === 'tencent' && parsedResult) {
                 if (parsedResult.error === 'cookie_invalid' || 
                     (parsedResult.br === -1 && parsedResult.url === '')) {
-                    return res.status(401).json({
-                        success: false,
-                        error: 'Cookie Invalid',
-                        message: 'Cookie无效或已过期，请重新获取Cookie',
-                        hint: '请登录QQ音乐网页版，使用Cookie获取书签重新获取',
-                        server: targetServer,
-                        type: targetType
-                    });
+                    
+                    // 根据是否传入了 cookie 给出不同提示
+                    if (!cookie) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Cookie Required',
+                            message: '该歌曲需要会员权限，请传入Cookie',
+                            hint: '请登录QQ音乐网页版，使用Cookie获取书签获取Cookie后再次请求',
+                            server: targetServer,
+                            type: targetType
+                        });
+                    } else {
+                        return res.status(401).json({
+                            success: false,
+                            error: 'Cookie Invalid',
+                            message: 'Cookie无效或已过期，请重新获取Cookie',
+                            hint: '请登录QQ音乐网页版，使用Cookie获取书签重新获取',
+                            server: targetServer,
+                            type: targetType
+                        });
+                    }
                 }
             }
             
