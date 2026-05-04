@@ -10,7 +10,7 @@ const app = express();
 const PORT = 3000;
 
 // 配置常量
-const RATE_LIMIT = 300; // 每个 IP 相同接口限制次数
+const RATE_LIMIT = 450; // 每个 IP 相同接口限制次数
 const BLACKLIST_DURATION = 5 * 60 * 1000; // 黑名单 5 分钟（毫秒）
 const WINDOW_DURATION = 1 * 60 * 1000; // 统计窗口 1 分钟
 
